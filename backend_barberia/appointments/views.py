@@ -60,6 +60,35 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         return queryset
     
+    # Añadimos este método para manejar la creación de citas
+    def create(self, request, *args, **kwargs):
+        """
+        Sobrescribe el método create para asignar automáticamente el usuario autenticado
+        como el cliente (customer) de la cita.
+        """
+        # Copiamos los datos para no modificar el request original
+        data = request.data.copy()
+        
+        # Asignamos el usuario autenticado como cliente
+        # No es necesario incluir esto en los datos ya que el serializer lo hará,
+        # pero lo dejamos por claridad
+        data['customer'] = request.user.id
+        
+        # Creamos el serializer con los datos y el contexto
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    def perform_create(self, serializer):
+        """
+        Método que realiza la creación del objeto.
+        Asegura que el cliente sea el usuario autenticado.
+        """
+        serializer.save(customer=self.request.user)
+    
     @action(detail=True, methods=['post'])
     def cancel(self, request, pk=None):
         appointment = self.get_object()
