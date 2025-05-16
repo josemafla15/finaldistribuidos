@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from barbers.models import BarberProfile, Specialty, BarberSpecialty
+from services.models import Service
+from schedules.models import WorkDay, TimeSlot
 from .serializers import UserSerializer, UserProfileSerializer
 
 User = get_user_model()
@@ -114,6 +116,39 @@ def register_barber(request):
                 )
             except Specialty.DoesNotExist:
                 pass  # Ignorar especialidades que no existen
+        
+        # Crear servicios para el barbero
+        services = request.data.get('services', [])
+        for service_data in services:
+            Service.objects.create(
+                barber=barber,
+                name=service_data.get('name'),
+                price=service_data.get('price'),
+                duration_minutes=service_data.get('duration_minutes'),
+                description=service_data.get('description', ''),
+                is_active=True
+            )
+        
+        # Crear días de trabajo para el barbero
+        work_days = request.data.get('work_days', [])
+        for work_day_data in work_days:
+            WorkDay.objects.create(
+                barber=barber,
+                day_of_week=work_day_data.get('day_of_week'),
+                start_time=work_day_data.get('start_time'),
+                end_time=work_day_data.get('end_time'),
+                is_working=work_day_data.get('is_working', True)
+            )
+        
+        # Crear slots de tiempo para el barbero
+        time_slots = request.data.get('time_slots', [])
+        for time_slot_data in time_slots:
+            TimeSlot.objects.create(
+                barber=barber,
+                start_time=time_slot_data.get('start_time'),
+                end_time=time_slot_data.get('end_time'),
+                is_available=time_slot_data.get('is_available', True)
+            )
         
         return Response(
             {"message": "Barbero registrado exitosamente"},
